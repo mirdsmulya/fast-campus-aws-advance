@@ -1,7 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS in Action: chapter 11 (Highly Available ElastiCache Deployment)'
-
-Parameters:
+Description: 'AWS in Action: chapter 11 (minimal)'
+Parameters:                                           
   VPC:
     Type: 'AWS::EC2::VPC::Id'
   SubnetA:
@@ -10,28 +9,25 @@ Parameters:
     Type: 'AWS::EC2::Subnet::Id'
   SubnetC:
     Type: 'AWS::EC2::Subnet::Id'
-
 Resources:
-  CacheSecurityGroup:
+  CacheSecurityGroup:                                 
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: cache
       VpcId: !Ref VPC
       SecurityGroupIngress:
-      - IpProtocol: tcp
+      - IpProtocol: tcp                               
         FromPort: 6379
         ToPort: 6379
         CidrIp: '0.0.0.0/0'
-  
-  CacheSubnetGroup:
+  CacheSubnetGroup:                                   
     Type: 'AWS::ElastiCache::SubnetGroup'
     Properties:
       Description: cache
       SubnetIds:
-      - Ref: SubnetA
+      - Ref: SubnetA                                  
       - Ref: SubnetB
       - Ref: SubnetC
-
   Cache:
     Type: 'AWS::ElastiCache::ReplicationGroup'
     Properties:
@@ -42,15 +38,10 @@ Resources:
       AutomaticFailoverEnabled: true
       CacheSubnetGroupName: !Ref CacheSubnetGroup
       PreferredCacheClusterAZs:
-        - !GetAtt SubnetA.AvailabilityZone
-        - !GetAtt SubnetB.AvailabilityZone
-        - !GetAtt SubnetC.AvailabilityZone
+        - ap-southeast-1a
+        - ap-southeast-1b
+        - ap-southeast-1c
       SecurityGroupIds:
         - !Ref CacheSecurityGroup
       AtRestEncryptionEnabled: true
       TransitEncryptionEnabled: true
-
-Outputs:
-  RedisEndpoint:
-    Value: !GetAtt Cache.PrimaryEndPoint.Address
-    Description: 'Primary endpoint for the Redis cluster'
