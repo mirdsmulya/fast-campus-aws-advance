@@ -26,12 +26,10 @@
 - **Proceed**: Click **Next**.
 
 ### Step 6: Configure Stack Options
-- **Optional Settings**: Configure tags, permissions, etc., if needed.
 - **Proceed**: Click **Next**.
 
 ### Step 7: Review and Deploy
 - **Review**: Ensure all details are correct.
-- **Acknowledge IAM**: Check the box to allow IAM resource creation.
 - **Deploy**: Click **Create stack**.
 
 ### Step 8: Monitor Deployment
