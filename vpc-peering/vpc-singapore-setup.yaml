@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "CloudFormation Template untuk VPC di Singapura (ap-southeast-1)"
+Description: "CloudFormation Template untuk VPC di Singapura (ap-southeast-1) dengan Internet Gateway"
 
 Parameters:
   SingaporeCIDR:
@@ -19,6 +19,19 @@ Resources:
         - Key: Name
           Value: Singapore-VPC
 
+  SingaporeIGW:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Singapore-IGW
+
+  AttachIGW:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref SingaporeVPC
+      InternetGatewayId: !Ref SingaporeIGW
+
   SingaporeSubnet:
     Type: "AWS::EC2::Subnet"
     Properties:
@@ -28,6 +41,27 @@ Resources:
       Tags:
         - Key: Name
           Value: Singapore-Subnet
+
+  SingaporeRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref SingaporeVPC
+      Tags:
+        - Key: Name
+          Value: Singapore-RouteTable
+
+  SingaporeRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref SingaporeRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref SingaporeIGW
+
+  SingaporeSubnetRouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref SingaporeSubnet
+      RouteTableId: !Ref SingaporeRouteTable
 
   SingaporeSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"

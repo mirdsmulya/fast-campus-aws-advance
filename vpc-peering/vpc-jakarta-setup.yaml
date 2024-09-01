@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "CloudFormation Template untuk VPC di Jakarta (ap-southeast-3)"
+Description: "CloudFormation Template untuk VPC di Jakarta (ap-southeast-3) dengan Internet Gateway"
 
 Parameters:
   JakartaCIDR:
@@ -19,6 +19,19 @@ Resources:
         - Key: Name
           Value: Jakarta-VPC
 
+  JakartaIGW:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Jakarta-IGW
+
+  AttachIGW:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref JakartaVPC
+      InternetGatewayId: !Ref JakartaIGW
+
   JakartaSubnet:
     Type: "AWS::EC2::Subnet"
     Properties:
@@ -28,6 +41,27 @@ Resources:
       Tags:
         - Key: Name
           Value: Jakarta-Subnet
+
+  JakartaRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref JakartaVPC
+      Tags:
+        - Key: Name
+          Value: Jakarta-RouteTable
+
+  JakartaRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref JakartaRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref JakartaIGW
+
+  JakartaSubnetRouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref JakartaSubnet
+      RouteTableId: !Ref JakartaRouteTable
 
   JakartaSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
@@ -43,7 +77,7 @@ Resources:
     Properties:
       InstanceType: "t3.micro"
       ImageId: "ami-0c1f9d5bae1d8ae80" # AMI ID untuk Jakarta (sesuaikan dengan AMI yang diinginkan)
-      Key: !Ref KeyPairName 
+      KeyName: !Ref KeyPairName 
       NetworkInterfaces:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
