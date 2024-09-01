@@ -30,6 +30,7 @@ Resources:
       - Ref: SubnetC
   Cache:
     Type: 'AWS::ElastiCache::ReplicationGroup'
+    ReplicationGroupId: !Ref AWS::StackName
     Properties:
       ReplicationGroupDescription: 'HA Redis Cluster'
       Engine: redis
