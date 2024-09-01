@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation Template untuk VPC dan Peering di Jakarta (ap-southeast-3)"
+
+Parameters:
+  JakartaCIDR:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "CIDR block untuk VPC di Jakarta"
+
+  SingaporeCIDR:
+    Type: String
+    Default: "10.1.0.0/16"
+    Description: "CIDR block untuk VPC di Singapura"
+
+Resources:
+  JakartaVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: !Ref JakartaCIDR
+      Tags:
+        - Key: Name
+          Value: Jakarta-VPC
+
+  JakartaSubnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref JakartaVPC
+      CidrBlock: "10.0.1.0/24"
+      AvailabilityZone: "ap-southeast-3a"
+      Tags:
+        - Key: Name
+          Value: Jakarta-Subnet
+
+  JakartaRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref JakartaVPC
+      Tags:
+        - Key: Name
+          Value: Jakarta-RouteTable
+
+  JakartaRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref JakartaRouteTable
+      DestinationCidrBlock: !Ref SingaporeCIDR
+      VpcPeeringConnectionId: !Ref VPCPeeringConnection
+
+  JakartaSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId: !Ref JakartaVPC
+      GroupDescription: "Security group for Jakarta-VPC"
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: !Ref SingaporeCIDR
+
+  JakartaInstance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t2.micro"
+      ImageId: "ami-0c1f9d5bae1d8ae80" # AMI ID untuk Jakarta (sesuaikan dengan AMI yang diinginkan)
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref JakartaSubnet
+          GroupSet:
+            - !Ref JakartaSecurityGroup
+
+  VPCPeeringConnection:
+    Type: "AWS::EC2::VPCPeeringConnection"
+    Properties:
+      VpcId: !Ref JakartaVPC
+      PeerVpcId: !Ref PeerVpcIdSingapore
+      PeerRegion: "ap-southeast-1"
+
+Outputs:
+  JakartaInstancePublicIP:
+    Description: "Public IP dari EC2 instance di Jakarta"
+    Value: !GetAtt JakartaInstance.PublicIp

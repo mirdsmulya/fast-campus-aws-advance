@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation Template untuk VPC di Singapura (ap-southeast-1)"
+
+Parameters:
+  SingaporeCIDR:
+    Type: String
+    Default: "10.1.0.0/16"
+    Description: "CIDR block untuk VPC di Singapura"
+
+  JakartaCIDR:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "CIDR block untuk VPC di Jakarta"
+
+Resources:
+  SingaporeVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: !Ref SingaporeCIDR
+      Tags:
+        - Key: Name
+          Value: Singapore-VPC
+
+  SingaporeSubnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref SingaporeVPC
+      CidrBlock: "10.1.1.0/24"
+      AvailabilityZone: "ap-southeast-1a"
+      Tags:
+        - Key: Name
+          Value: Singapore-Subnet
+
+  SingaporeRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref SingaporeVPC
+      Tags:
+        - Key: Name
+          Value: Singapore-RouteTable
+
+  SingaporeRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref SingaporeRouteTable
+      DestinationCidrBlock: !Ref JakartaCIDR
+      VpcPeeringConnectionId: !Ref VPCPeeringConnection
+
+  SingaporeSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId: !Ref SingaporeVPC
+      GroupDescription: "Security group for Singapore-VPC"
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: !Ref JakartaCIDR
+
+  SingaporeInstance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t2.micro"
+      ImageId: "ami-01811d4912b4ccb26" # AMI ID untuk Singapura (sesuaikan dengan AMI yang diinginkan)
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref SingaporeSubnet
+          GroupSet:
+            - !Ref SingaporeSecurityGroup
+
+Outputs:
+  SingaporeInstancePublicIP:
+    Description: "Public IP dari EC2 instance di Singapura"
+    Value: !GetAtt SingaporeInstance.PublicIp

@@ -29,17 +29,25 @@ Resources:
         - Key: Name
           Value: Singapore-VPC
 
-  JakartaVPCCidrBlock:
-    Type: "AWS::EC2::VPCCidrBlock"
+  JakartaSubnet:
+    Type: "AWS::EC2::Subnet"
     Properties:
       VpcId: !Ref JakartaVPC
-      CidrBlock: !Ref JakartaCIDR
+      CidrBlock: "10.0.1.0/24"
+      AvailabilityZone: "ap-southeast-3a"
+      Tags:
+        - Key: Name
+          Value: Jakarta-Subnet
 
-  SingaporeVPCCidrBlock:
-    Type: "AWS::EC2::VPCCidrBlock"
+  SingaporeSubnet:
+    Type: "AWS::EC2::Subnet"
     Properties:
       VpcId: !Ref SingaporeVPC
-      CidrBlock: !Ref SingaporeCIDR
+      CidrBlock: "10.1.1.0/24"
+      AvailabilityZone: "ap-southeast-1a"
+      Tags:
+        - Key: Name
+          Value: Singapore-Subnet
 
   VPCPeeringConnection:
     Type: "AWS::EC2::VPCPeeringConnection"
