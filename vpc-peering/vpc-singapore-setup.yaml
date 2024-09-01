@@ -6,6 +6,9 @@ Parameters:
     Type: String
     Default: "10.1.0.0/16"
     Description: "CIDR block untuk VPC di Singapura"
+  KeyPairName:
+    Description: Key Pair untuk akses instance di Jakarta (sesuaikan dengan Key Pair yang diperlukan)
+    Type: String
 
 Resources:
   SingaporeVPC:
@@ -40,6 +43,7 @@ Resources:
     Properties:
       InstanceType: "t2.micro"
       ImageId: "ami-01811d4912b4ccb26" # AMI ID untuk Singapura (sesuaikan dengan AMI yang diinginkan)
+      KeyName: !Ref KeyPairName
       NetworkInterfaces:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"

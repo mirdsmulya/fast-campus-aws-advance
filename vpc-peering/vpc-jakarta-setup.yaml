@@ -6,6 +6,10 @@ Parameters:
     Type: String
     Default: "10.0.0.0/16"
     Description: "CIDR block untuk VPC di Jakarta"
+    
+  KeyPairName:
+    Description: Key Pair untuk akses instance di Jakarta (sesuaikan dengan Key Pair yang diperlukan)
+    Type: String
 
 Resources:
   JakartaVPC:
@@ -38,8 +42,9 @@ Resources:
   JakartaInstance:
     Type: "AWS::EC2::Instance"
     Properties:
-      InstanceType: "t2.micro"
+      InstanceType: "t3.micro"
       ImageId: "ami-0c1f9d5bae1d8ae80" # AMI ID untuk Jakarta (sesuaikan dengan AMI yang diinginkan)
+      Key: !Ref KeyPairName 
       NetworkInterfaces:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
