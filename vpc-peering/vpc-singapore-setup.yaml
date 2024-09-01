@@ -7,11 +7,6 @@ Parameters:
     Default: "10.1.0.0/16"
     Description: "CIDR block untuk VPC di Singapura"
 
-  JakartaCIDR:
-    Type: String
-    Default: "10.0.0.0/16"
-    Description: "CIDR block untuk VPC di Jakarta"
-
 Resources:
   SingaporeVPC:
     Type: "AWS::EC2::VPC"
@@ -31,21 +26,6 @@ Resources:
         - Key: Name
           Value: Singapore-Subnet
 
-  SingaporeRouteTable:
-    Type: "AWS::EC2::RouteTable"
-    Properties:
-      VpcId: !Ref SingaporeVPC
-      Tags:
-        - Key: Name
-          Value: Singapore-RouteTable
-
-  SingaporeRoute:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: !Ref SingaporeRouteTable
-      DestinationCidrBlock: !Ref JakartaCIDR
-      VpcPeeringConnectionId: !Ref VPCPeeringConnection
-
   SingaporeSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -53,7 +33,7 @@ Resources:
       GroupDescription: "Security group for Singapore-VPC"
       SecurityGroupIngress:
         - IpProtocol: -1
-          CidrIp: !Ref JakartaCIDR
+          CidrIp: "0.0.0.0/0"
 
   SingaporeInstance:
     Type: "AWS::EC2::Instance"
@@ -71,3 +51,7 @@ Outputs:
   SingaporeInstancePublicIP:
     Description: "Public IP dari EC2 instance di Singapura"
     Value: !GetAtt SingaporeInstance.PublicIp
+
+  SingaporeVPCID:
+    Description: "VPC ID dari Singapore VPC"
+    Value: !Ref SingaporeVPC

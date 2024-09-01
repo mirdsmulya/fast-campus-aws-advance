@@ -1,16 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "CloudFormation Template untuk VPC dan Peering di Jakarta (ap-southeast-3)"
+Description: "CloudFormation Template untuk VPC di Jakarta (ap-southeast-3)"
 
 Parameters:
   JakartaCIDR:
     Type: String
     Default: "10.0.0.0/16"
     Description: "CIDR block untuk VPC di Jakarta"
-
-  SingaporeCIDR:
-    Type: String
-    Default: "10.1.0.0/16"
-    Description: "CIDR block untuk VPC di Singapura"
 
 Resources:
   JakartaVPC:
@@ -31,21 +26,6 @@ Resources:
         - Key: Name
           Value: Jakarta-Subnet
 
-  JakartaRouteTable:
-    Type: "AWS::EC2::RouteTable"
-    Properties:
-      VpcId: !Ref JakartaVPC
-      Tags:
-        - Key: Name
-          Value: Jakarta-RouteTable
-
-  JakartaRoute:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: !Ref JakartaRouteTable
-      DestinationCidrBlock: !Ref SingaporeCIDR
-      VpcPeeringConnectionId: !Ref VPCPeeringConnection
-
   JakartaSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -53,7 +33,7 @@ Resources:
       GroupDescription: "Security group for Jakarta-VPC"
       SecurityGroupIngress:
         - IpProtocol: -1
-          CidrIp: !Ref SingaporeCIDR
+          CidrIp: "0.0.0.0/0"
 
   JakartaInstance:
     Type: "AWS::EC2::Instance"
@@ -67,14 +47,11 @@ Resources:
           GroupSet:
             - !Ref JakartaSecurityGroup
 
-  VPCPeeringConnection:
-    Type: "AWS::EC2::VPCPeeringConnection"
-    Properties:
-      VpcId: !Ref JakartaVPC
-      PeerVpcId: !Ref PeerVpcIdSingapore
-      PeerRegion: "ap-southeast-1"
-
 Outputs:
   JakartaInstancePublicIP:
     Description: "Public IP dari EC2 instance di Jakarta"
     Value: !GetAtt JakartaInstance.PublicIp
+
+  JakartaVPCID:
+    Description: "VPC ID dari Jakarta VPC"
+    Value: !Ref JakartaVPC
