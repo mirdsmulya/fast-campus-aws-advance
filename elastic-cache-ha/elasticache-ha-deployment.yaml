@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS in Action: chapter 11 (Highly Available ElastiCache Deployment)'
+
+Parameters:
+  VPC:
+    Type: 'AWS::EC2::VPC::Id'
+  SubnetA:
+    Type: 'AWS::EC2::Subnet::Id'
+  SubnetB:
+    Type: 'AWS::EC2::Subnet::Id'
+  SubnetC:
+    Type: 'AWS::EC2::Subnet::Id'
+
+Resources:
+  CacheSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: cache
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 6379
+        ToPort: 6379
+        CidrIp: '0.0.0.0/0'
+  
+  CacheSubnetGroup:
+    Type: 'AWS::ElastiCache::SubnetGroup'
+    Properties:
+      Description: cache
+      SubnetIds:
+      - Ref: SubnetA
+      - Ref: SubnetB
+      - Ref: SubnetC
+
+  Cache:
+    Type: 'AWS::ElastiCache::ReplicationGroup'
+    Properties:
+      ReplicationGroupDescription: 'HA Redis Cluster'
+      Engine: redis
+      CacheNodeType: 'cache.t2.micro'
+      NumCacheClusters: 3
+      AutomaticFailoverEnabled: true
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      PreferredCacheClusterAZs:
+        - !GetAtt SubnetA.AvailabilityZone
+        - !GetAtt SubnetB.AvailabilityZone
+        - !GetAtt SubnetC.AvailabilityZone
+      SecurityGroupIds:
+        - !Ref CacheSecurityGroup
+      AtRestEncryptionEnabled: true
+      TransitEncryptionEnabled: true
+
+Outputs:
+  RedisEndpoint:
+    Value: !GetAtt Cache.PrimaryEndPoint.Address
+    Description: 'Primary endpoint for the Redis cluster'
