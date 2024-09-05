@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "EC2 Auto Scaling Group with ALB in a private subnet using a NAT Gateway in public subnet and key pair for SSH access"
+Description: "EC2 Auto Scaling Group with ALB in a private subnet using a NAT Gateway in public subnet, Jump Host in public subnet, and key pair for SSH access"
 
 Parameters:
   KeyName:
@@ -31,7 +31,7 @@ Resources:
       VpcId: !Ref MyVPC
       InternetGatewayId: !Ref MyInternetGateway
 
-  # Create Public Subnet 1
+  # Create Public Subnet 1 (for Jump Host)
   PublicSubnet1:
     Type: "AWS::EC2::Subnet"
     Properties:
@@ -43,7 +43,7 @@ Resources:
         - Key: "Name"
           Value: "PublicSubnet1"
 
-  # Create Public Subnet 2 (in a different AZ)
+  # Create Public Subnet 2
   PublicSubnet2:
     Type: "AWS::EC2::Subnet"
     Properties:
@@ -55,7 +55,7 @@ Resources:
         - Key: "Name"
           Value: "PublicSubnet2"
 
-  # Create Private Subnet 1
+  # Create Private Subnet 1 (for ASG)
   PrivateSubnet1:
     Type: "AWS::EC2::Subnet"
     Properties:
@@ -66,7 +66,7 @@ Resources:
         - Key: "Name"
           Value: "PrivateSubnet1"
 
-  # Create Private Subnet 2 (in a different AZ)
+  # Create Private Subnet 2
   PrivateSubnet2:
     Type: "AWS::EC2::Subnet"
     Properties:
@@ -163,11 +163,11 @@ Resources:
           ToPort: 80
           CidrIp: "0.0.0.0/0"
 
-  # Security Group for EC2 Instances
+  # Security Group for EC2 Instances (in ASG)
   EC2SecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: "Allow inbound traffic from ALB"
+      GroupDescription: "Allow inbound traffic from ALB and Jump Host"
       VpcId: !Ref MyVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -177,7 +177,19 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: "0.0.0.0/0" # Allows SSH access. You can restrict this to your own IP.
+          SourceSecurityGroupId: !Ref JumpHostSecurityGroup
+
+  # Security Group for Jump Host EC2 Instance
+  JumpHostSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow SSH access to the Jump Host from anywhere and SSH to private EC2"
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: "0.0.0.0/0"  # Replace this with your IP for security
 
   # Application Load Balancer
   MyALB:
@@ -207,17 +219,18 @@ Resources:
     Properties:
       LaunchTemplateData:
         InstanceType: "t2.micro"
-        ImageId: "ami-01811d4912b4ccb26"
+        ImageId: "ami-01811d4912b4ccb26" # Ensure this is valid in your region
         KeyName: !Ref KeyName
         SecurityGroupIds:
           - !Ref EC2SecurityGroup
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
-            echo "Hello World from EC2" > /var/www/html/index.html
-            sudo yum install -y httpd
-            sudo systemctl start httpd
-            sudo systemctl enable httpd
+            sudo apt-get update -y
+            sudo apt-get install -y apache2
+            echo "Hello World from EC2" | sudo tee /var/www/html/index.html
+            sudo systemctl start apache2
+            sudo systemctl enable apache2
 
   # Auto Scaling Group
   MyAutoScalingGroup:
@@ -247,3 +260,21 @@ Resources:
       TargetType: instance
       Matcher:
         HttpCode: "200"
+
+  # Jump Host EC2 Instance (for SSH access)
+  JumpHostInstance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t2.micro"
+      KeyName: !Ref KeyName
+      ImageId: "ami-01811d4912b4ccb26"  # Replace with a valid AMI ID
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref JumpHostSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y amazon-ssm-agent
+          systemctl enable amazon-ssm-agent
+          systemctl start amazon-ssm-agent
