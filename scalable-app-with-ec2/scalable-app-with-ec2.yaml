@@ -272,13 +272,34 @@ Resources:
         LaunchTemplateId: !Ref MyLaunchTemplate
         Version: !GetAtt MyLaunchTemplate.LatestVersionNumber
       MinSize: "2"
-      MaxSize: "3"
+      MaxSize: "5"
+      DesiredCapacity: "2"
+      HealthCheckType: "ELB"
+      HealthCheckGracePeriod: 300
       TargetGroupARNs:
         - !Ref MyTargetGroup
-      Tags:
-        - Key: "Name"
-          Value: "MyAppInstance"
-          PropagateAtLaunch: true
+
+  # Dynamic Scaling Policy - Scale Out based on CPU utilization
+  ScaleOutPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AutoScalingGroupName: !Ref MyAutoScalingGroup
+      PolicyType: "TargetTrackingScaling"
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: "ASGAverageCPUUtilization"
+        TargetValue: 70.0  # Scale out when average CPU utilization exceeds 70%
+
+  # Dynamic Scaling Policy - Scale In based on CPU utilization
+  ScaleInPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AutoScalingGroupName: !Ref MyAutoScalingGroup
+      PolicyType: "TargetTrackingScaling"
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: "ASGAverageCPUUtilization"
+        TargetValue: 30.0  # Scale in when average CPU utilization drops below 30%
 
   # Target Group for ALB
   MyTargetGroup:
