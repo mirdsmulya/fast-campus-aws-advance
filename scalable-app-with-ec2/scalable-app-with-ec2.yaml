@@ -257,7 +257,7 @@ Resources:
             #!/bin/bash
             sudo apt-get update -y
             sudo apt-get install -y apache2
-            echo "Hello World from EC2" | sudo tee /var/www/html/index.html
+            echo "Hello from Fast Campus EC2!" | sudo tee /var/www/html/index.html
             sudo systemctl start apache2
             sudo systemctl enable apache2
 
