@@ -275,6 +275,10 @@ Resources:
       MaxSize: "3"
       TargetGroupARNs:
         - !Ref MyTargetGroup
+      Tags:
+        - Key: "Name"
+          Value: "MyAppInstance"
+          PropagateAtLaunch: true
 
   # Target Group for ALB
   MyTargetGroup:
@@ -307,3 +311,6 @@ Resources:
           yum install -y amazon-ssm-agent
           systemctl enable amazon-ssm-agent
           systemctl start amazon-ssm-agent
+      Tags:
+        - Key: "Name"
+          Value: "JumpHost"
