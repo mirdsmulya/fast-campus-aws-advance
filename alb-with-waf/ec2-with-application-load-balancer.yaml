@@ -1,0 +1,341 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "EC2 Auto Scaling Group with ALB in a private subnet using a NAT Gateway in each public subnet, Jump Host in public subnet, and key pair for SSH access"
+
+Parameters:
+  KeyName:
+    Description: "Name of an existing EC2 KeyPair to enable SSH access to the instances"
+    Type: "AWS::EC2::KeyPair::KeyName"
+    Default: "aws-key-pair" # Replace with your key pair name
+    ConstraintDescription: "Must be the name of an existing EC2 KeyPair."
+
+Resources:
+  # Create a VPC
+  FastCampusVPC:
+    Type: "AWS::EC2::VPC"
+    Properties: 
+      CidrBlock: "10.0.0.0/16"
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: "Name"
+          Value: "FastCampusVPC"
+
+  # Create an Internet Gateway
+  FastCampusInternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+
+  # Attach Internet Gateway to VPC
+  AttachGateway:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref FastCampusVPC
+      InternetGatewayId: !Ref FastCampusInternetGateway
+
+  # Create Public Subnet 1 (for Jump Host)
+  PublicSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref FastCampusVPC
+      CidrBlock: "10.0.1.0/24"
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: "Name"
+          Value: "PublicSubnet1"
+
+  # Create Public Subnet 2
+  PublicSubnet2:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref FastCampusVPC
+      CidrBlock: "10.0.3.0/24"
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags:
+        - Key: "Name"
+          Value: "PublicSubnet2"
+
+  # Create Private Subnet 1 (for ASG)
+  PrivateSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref FastCampusVPC
+      CidrBlock: "10.0.2.0/24"
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: "Name"
+          Value: "PrivateSubnet1"
+
+  # Create Private Subnet 2
+  PrivateSubnet2:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref FastCampusVPC
+      CidrBlock: "10.0.4.0/24"
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags:
+        - Key: "Name"
+          Value: "PrivateSubnet2"
+
+  # Create a NAT Gateway in Public Subnet 1
+  FastCampusEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: "vpc"
+
+  FastCampusNATGateway1:
+    Type: "AWS::EC2::NatGateway"
+    Properties:
+      AllocationId: !GetAtt FastCampusEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  # Create a NAT Gateway in Public Subnet 2
+  FastCampusEIP2:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: "vpc"
+
+  FastCampusNATGateway2:
+    Type: "AWS::EC2::NatGateway"
+    Properties:
+      AllocationId: !GetAtt FastCampusEIP2.AllocationId
+      SubnetId: !Ref PublicSubnet2
+
+  # Route Table for Public Subnet
+  PublicRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref FastCampusVPC
+      Tags:
+        - Key: "Name"
+          Value: "PublicRouteTable"
+
+  # Route for Public Subnet to Internet Gateway
+  PublicRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref FastCampusInternetGateway
+
+  # Associate Public Route Table with Public Subnet 1
+  PublicRouteTableAssociation1:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  # Associate Public Route Table with Public Subnet 2
+  PublicRouteTableAssociation2:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # Route Table for Private Subnet 1
+  PrivateRouteTable1:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref FastCampusVPC
+      Tags:
+        - Key: "Name"
+          Value: "PrivateRouteTable1"
+
+  # Route for Private Subnet 1 to NAT Gateway 1
+  PrivateRoute1:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref FastCampusNATGateway1
+
+  # Associate Private Route Table with Private Subnet 1
+  PrivateRouteTableAssociation1:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  # Route Table for Private Subnet 2
+  PrivateRouteTable2:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref FastCampusVPC
+      Tags:
+        - Key: "Name"
+          Value: "PrivateRouteTable2"
+
+  # Route for Private Subnet 2 to NAT Gateway 2
+  PrivateRoute2:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref FastCampusNATGateway2
+
+  # Associate Private Route Table with Private Subnet 2
+  PrivateRouteTableAssociation2:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  # Security Group for ALB
+  ALBSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow HTTP inbound traffic"
+      VpcId: !Ref FastCampusVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+
+  # Security Group for EC2 Instances (in ASG)
+  EC2SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow inbound traffic from ALB and Jump Host"
+      VpcId: !Ref FastCampusVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref JumpHostSecurityGroup
+
+  # Security Group for Jump Host EC2 Instance
+  JumpHostSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow SSH access to the Jump Host from anywhere and SSH to private EC2"
+      VpcId: !Ref FastCampusVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: "0.0.0.0/0"  # Replace this with your IP for security
+
+  # Application Load Balancer
+  FastCampusALB:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Scheme: internet-facing
+
+  # ALB Listener
+  FastCampusALBListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn: !Ref FastCampusALB
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: "forward"
+          TargetGroupArn: !Ref FastCampusTargetGroup
+
+  # Launch Template for Auto Scaling Group with KeyName
+  FastCampusLaunchTemplate:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+      LaunchTemplateData:
+        InstanceType: "t2.micro"
+        ImageId: "ami-01811d4912b4ccb26" # Ensure this is valid in your region
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !Ref EC2SecurityGroup
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            sudo apt-get update -y
+            sudo apt-get install -y apache2
+            echo "Hello from Fast Campus EC2!" | sudo tee /var/www/html/index.html
+            sudo systemctl start apache2
+            sudo systemctl enable apache2
+
+  # Auto Scaling Group
+  FastCampusAutoScalingGroup:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      LaunchTemplate:
+        LaunchTemplateId: !Ref FastCampusLaunchTemplate
+        Version: !GetAtt FastCampusLaunchTemplate.LatestVersionNumber
+      MinSize: "2"
+      MaxSize: "5"
+      DesiredCapacity: "2"
+      HealthCheckType: "ELB"
+      HealthCheckGracePeriod: 300
+      TargetGroupARNs:
+        - !Ref FastCampusTargetGroup
+      Tags:
+        - Key: "Name"
+          Value: "FastCampusAppInstance"
+          PropagateAtLaunch: true
+
+  # Dynamic Scaling Policy - Scale Out based on CPU utilization
+  ScaleOutPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AutoScalingGroupName: !Ref FastCampusAutoScalingGroup
+      PolicyType: "TargetTrackingScaling"
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: "ASGAverageCPUUtilization"
+        TargetValue: 70.0  # Scale out when average CPU utilization exceeds 70%
+
+  # Dynamic Scaling Policy - Scale In based on CPU utilization
+  ScaleInPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AutoScalingGroupName: !Ref FastCampusAutoScalingGroup
+      PolicyType: "TargetTrackingScaling"
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: "ASGAverageCPUUtilization"
+        TargetValue: 30.0  # Scale in when average CPU utilization drops below 30%
+
+  # Target Group for ALB
+  FastCampusTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      VpcId: !Ref FastCampusVPC
+      Protocol: HTTP
+      Port: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: "80"
+      HealthCheckPath: "/"
+      TargetType: instance
+      Matcher:
+        HttpCode: "200"
+
+  # Jump Host EC2 Instance (for SSH access)
+  JumpHostInstance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t2.micro"
+      KeyName: !Ref KeyName
+      ImageId: "ami-01811d4912b4ccb26"  # Replace with a valid AMI ID
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref JumpHostSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y amazon-ssm-agent
+          systemctl enable amazon-ssm-agent
+          systemctl start amazon-ssm-agent
+      Tags:
+        - Key: "Name"
+          Value: "FastCampusJumpHost"
