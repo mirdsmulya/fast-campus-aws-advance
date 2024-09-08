@@ -10,7 +10,7 @@ Parameters:
 
 Resources:
   # Create a VPC
-  MyVPC:
+  FastCampusVPC:
     Type: "AWS::EC2::VPC"
     Properties: 
       CidrBlock: "10.0.0.0/16"
@@ -18,24 +18,24 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: "Name"
-          Value: "MyVPC"
+          Value: "FastCampusVPC"
 
   # Create an Internet Gateway
-  MyInternetGateway:
+  FastCampusInternetGateway:
     Type: "AWS::EC2::InternetGateway"
 
   # Attach Internet Gateway to VPC
   AttachGateway:
     Type: "AWS::EC2::VPCGatewayAttachment"
     Properties:
-      VpcId: !Ref MyVPC
-      InternetGatewayId: !Ref MyInternetGateway
+      VpcId: !Ref FastCampusVPC
+      InternetGatewayId: !Ref FastCampusInternetGateway
 
   # Create Public Subnet 1 (for Jump Host)
   PublicSubnet1:
     Type: "AWS::EC2::Subnet"
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       CidrBlock: "10.0.1.0/24"
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select [0, !GetAZs ""]
@@ -47,7 +47,7 @@ Resources:
   PublicSubnet2:
     Type: "AWS::EC2::Subnet"
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       CidrBlock: "10.0.3.0/24"
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select [1, !GetAZs ""]
@@ -59,7 +59,7 @@ Resources:
   PrivateSubnet1:
     Type: "AWS::EC2::Subnet"
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       CidrBlock: "10.0.2.0/24"
       AvailabilityZone: !Select [0, !GetAZs ""]
       Tags:
@@ -70,7 +70,7 @@ Resources:
   PrivateSubnet2:
     Type: "AWS::EC2::Subnet"
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       CidrBlock: "10.0.4.0/24"
       AvailabilityZone: !Select [1, !GetAZs ""]
       Tags:
@@ -78,34 +78,34 @@ Resources:
           Value: "PrivateSubnet2"
 
   # Create a NAT Gateway in Public Subnet 1
-  MyEIP:
+  FastCampusEIP:
     Type: "AWS::EC2::EIP"
     Properties:
       Domain: "vpc"
 
-  MyNATGateway1:
+  FastCampusNATGateway1:
     Type: "AWS::EC2::NatGateway"
     Properties:
-      AllocationId: !GetAtt MyEIP.AllocationId
+      AllocationId: !GetAtt FastCampusEIP.AllocationId
       SubnetId: !Ref PublicSubnet1
 
   # Create a NAT Gateway in Public Subnet 2
-  MyEIP2:
+  FastCampusEIP2:
     Type: "AWS::EC2::EIP"
     Properties:
       Domain: "vpc"
 
-  MyNATGateway2:
+  FastCampusNATGateway2:
     Type: "AWS::EC2::NatGateway"
     Properties:
-      AllocationId: !GetAtt MyEIP2.AllocationId
+      AllocationId: !GetAtt FastCampusEIP2.AllocationId
       SubnetId: !Ref PublicSubnet2
 
   # Route Table for Public Subnet
   PublicRouteTable:
     Type: "AWS::EC2::RouteTable"
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       Tags:
         - Key: "Name"
           Value: "PublicRouteTable"
@@ -116,7 +116,7 @@ Resources:
     Properties:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref MyInternetGateway
+      GatewayId: !Ref FastCampusInternetGateway
 
   # Associate Public Route Table with Public Subnet 1
   PublicRouteTableAssociation1:
@@ -136,7 +136,7 @@ Resources:
   PrivateRouteTable1:
     Type: "AWS::EC2::RouteTable"
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       Tags:
         - Key: "Name"
           Value: "PrivateRouteTable1"
@@ -147,7 +147,7 @@ Resources:
     Properties:
       RouteTableId: !Ref PrivateRouteTable1
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref MyNATGateway1
+      NatGatewayId: !Ref FastCampusNATGateway1
 
   # Associate Private Route Table with Private Subnet 1
   PrivateRouteTableAssociation1:
@@ -160,7 +160,7 @@ Resources:
   PrivateRouteTable2:
     Type: "AWS::EC2::RouteTable"
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       Tags:
         - Key: "Name"
           Value: "PrivateRouteTable2"
@@ -171,7 +171,7 @@ Resources:
     Properties:
       RouteTableId: !Ref PrivateRouteTable2
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref MyNATGateway2
+      NatGatewayId: !Ref FastCampusNATGateway2
 
   # Associate Private Route Table with Private Subnet 2
   PrivateRouteTableAssociation2:
@@ -185,7 +185,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: "Allow HTTP inbound traffic"
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -197,7 +197,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: "Allow inbound traffic from ALB and Jump Host"
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -213,7 +213,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: "Allow SSH access to the Jump Host from anywhere and SSH to private EC2"
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
@@ -221,7 +221,7 @@ Resources:
           CidrIp: "0.0.0.0/0"  # Replace this with your IP for security
 
   # Application Load Balancer
-  MyALB:
+  FastCampusALB:
     Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
     Properties:
       Subnets:
@@ -232,18 +232,18 @@ Resources:
       Scheme: internet-facing
 
   # ALB Listener
-  MyALBListener:
+  FastCampusALBListener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
     Properties:
-      LoadBalancerArn: !Ref MyALB
+      LoadBalancerArn: !Ref FastCampusALB
       Protocol: HTTP
       Port: 80
       DefaultActions:
         - Type: "forward"
-          TargetGroupArn: !Ref MyTargetGroup
+          TargetGroupArn: !Ref FastCampusTargetGroup
 
   # Launch Template for Auto Scaling Group with KeyName
-  MyLaunchTemplate:
+  FastCampusLaunchTemplate:
     Type: "AWS::EC2::LaunchTemplate"
     Properties:
       LaunchTemplateData:
@@ -262,28 +262,28 @@ Resources:
             sudo systemctl enable apache2
 
   # Auto Scaling Group
-  MyAutoScalingGroup:
+  FastCampusAutoScalingGroup:
     Type: "AWS::AutoScaling::AutoScalingGroup"
     Properties:
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
       LaunchTemplate:
-        LaunchTemplateId: !Ref MyLaunchTemplate
-        Version: !GetAtt MyLaunchTemplate.LatestVersionNumber
+        LaunchTemplateId: !Ref FastCampusLaunchTemplate
+        Version: !GetAtt FastCampusLaunchTemplate.LatestVersionNumber
       MinSize: "2"
       MaxSize: "5"
       DesiredCapacity: "2"
       HealthCheckType: "ELB"
       HealthCheckGracePeriod: 300
       TargetGroupARNs:
-        - !Ref MyTargetGroup
+        - !Ref FastCampusTargetGroup
 
   # Dynamic Scaling Policy - Scale Out based on CPU utilization
   ScaleOutPolicy:
     Type: "AWS::AutoScaling::ScalingPolicy"
     Properties:
-      AutoScalingGroupName: !Ref MyAutoScalingGroup
+      AutoScalingGroupName: !Ref FastCampusAutoScalingGroup
       PolicyType: "TargetTrackingScaling"
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
@@ -294,7 +294,7 @@ Resources:
   ScaleInPolicy:
     Type: "AWS::AutoScaling::ScalingPolicy"
     Properties:
-      AutoScalingGroupName: !Ref MyAutoScalingGroup
+      AutoScalingGroupName: !Ref FastCampusAutoScalingGroup
       PolicyType: "TargetTrackingScaling"
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
@@ -302,10 +302,10 @@ Resources:
         TargetValue: 30.0  # Scale in when average CPU utilization drops below 30%
 
   # Target Group for ALB
-  MyTargetGroup:
+  FastCampusTargetGroup:
     Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref FastCampusVPC
       Protocol: HTTP
       Port: 80
       HealthCheckProtocol: HTTP
