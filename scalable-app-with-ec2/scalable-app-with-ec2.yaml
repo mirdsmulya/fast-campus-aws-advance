@@ -278,6 +278,10 @@ Resources:
       HealthCheckGracePeriod: 300
       TargetGroupARNs:
         - !Ref FastCampusTargetGroup
+      Tags:
+        - Key: "Name"
+          Value: "FastCampusAppInstance"
+          PropagateAtLaunch: true
 
   # Dynamic Scaling Policy - Scale Out based on CPU utilization
   ScaleOutPolicy:
@@ -334,4 +338,4 @@ Resources:
           systemctl start amazon-ssm-agent
       Tags:
         - Key: "Name"
-          Value: "JumpHost"
+          Value: "FastCampusJumpHost"
