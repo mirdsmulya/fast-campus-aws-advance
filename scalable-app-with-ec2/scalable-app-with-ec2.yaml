@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "EC2 Auto Scaling Group with ALB in a private subnet using a NAT Gateway in public subnet, Jump Host in public subnet, and key pair for SSH access"
+Description: "EC2 Auto Scaling Group with ALB in a private subnet using a NAT Gateway in each public subnet, Jump Host in public subnet, and key pair for SSH access"
 
 Parameters:
   KeyName:
@@ -83,11 +83,23 @@ Resources:
     Properties:
       Domain: "vpc"
 
-  MyNATGateway:
+  MyNATGateway1:
     Type: "AWS::EC2::NatGateway"
     Properties:
       AllocationId: !GetAtt MyEIP.AllocationId
       SubnetId: !Ref PublicSubnet1
+
+  # Create a NAT Gateway in Public Subnet 2
+  MyEIP2:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: "vpc"
+
+  MyNATGateway2:
+    Type: "AWS::EC2::NatGateway"
+    Properties:
+      AllocationId: !GetAtt MyEIP2.AllocationId
+      SubnetId: !Ref PublicSubnet2
 
   # Route Table for Public Subnet
   PublicRouteTable:
@@ -120,36 +132,53 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable
 
-  # Route Table for Private Subnet
-  PrivateRouteTable:
+  # Route Table for Private Subnet 1
+  PrivateRouteTable1:
     Type: "AWS::EC2::RouteTable"
     Properties:
       VpcId: !Ref MyVPC
       Tags:
         - Key: "Name"
-          Value: "PrivateRouteTable"
+          Value: "PrivateRouteTable1"
 
-  # Route for Private Subnet to NAT Gateway
-  PrivateRoute:
+  # Route for Private Subnet 1 to NAT Gateway 1
+  PrivateRoute1:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PrivateRouteTable1
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref MyNATGateway
+      NatGatewayId: !Ref MyNATGateway1
 
   # Associate Private Route Table with Private Subnet 1
   PrivateRouteTableAssociation1:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties:
       SubnetId: !Ref PrivateSubnet1
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PrivateRouteTable1
+
+  # Route Table for Private Subnet 2
+  PrivateRouteTable2:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: "Name"
+          Value: "PrivateRouteTable2"
+
+  # Route for Private Subnet 2 to NAT Gateway 2
+  PrivateRoute2:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref MyNATGateway2
 
   # Associate Private Route Table with Private Subnet 2
   PrivateRouteTableAssociation2:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties:
       SubnetId: !Ref PrivateSubnet2
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PrivateRouteTable2
 
   # Security Group for ALB
   ALBSecurityGroup:
