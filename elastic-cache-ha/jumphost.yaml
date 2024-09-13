@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'JumpHost Deployment within VPC for Redis Cluster Access (Ubuntu with SSM Agent)'
+
+Parameters:                                           
+  VPC:
+    Type: 'AWS::EC2::VPC::Id'
+  SubnetA:
+    Type: 'AWS::EC2::Subnet::Id'
+  KeyPairName:
+    Description: 'Name of an existing EC2 KeyPair to enable SSH access to the instance'
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    ConstraintDescription: 'Must be the name of an existing EC2 KeyPair.'
+
+Resources:
+  # Security group for the EC2 instance (JumpHost)
+  JumpHostSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for JumpHost to access Redis'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0  # Allow SSH access from anywhere (you can restrict this for security)
+
+  # EC2 instance that will act as a JumpHost
+  JumpHostInstance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: 't2.micro'
+      KeyName: !Ref KeyPairName
+      SubnetId: !Ref SubnetA  # Launch the EC2 instance in Subnet A
+      SecurityGroupIds:
+        - !Ref JumpHostSecurityGroup
+      ImageId: 'ami-01811d4912b4ccb26'  # Replace with an appropriate Ubuntu AMI ID for your regionsudo apt update
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          sudo apt update
+          sudo apt install -y redis-tools
+      Tags:
+        - Key: "Name"
+          Value: "FastCampusJumpHost"

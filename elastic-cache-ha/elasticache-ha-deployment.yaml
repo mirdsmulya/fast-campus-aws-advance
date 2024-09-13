@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS in Action: chapter 11 (minimal)'
+Description: 'Redis Cluster Deployment within VPC with Authorized Network Access'
+
 Parameters:                                           
   VPC:
     Type: 'AWS::EC2::VPC::Id'
@@ -9,25 +10,38 @@ Parameters:
     Type: 'AWS::EC2::Subnet::Id'
   SubnetC:
     Type: 'AWS::EC2::Subnet::Id'
+  RedisAuthToken:
+    Description: 'Redis AuthToken (password) for securing the Redis cluster'
+    Type: String
+    NoEcho: true  # Prevents the password from being shown in the CloudFormation console
+  AuthorizedNetwork:
+    Description: 'First authorized network CIDR block for accessing Redis (e.g., 10.0.0.0/16)'
+    Type: String
+
 Resources:
+  # Security group for Redis cluster with authorized network access
   CacheSecurityGroup:                                 
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: cache
+      GroupDescription: 'Security group for Redis cluster'
       VpcId: !Ref VPC
       SecurityGroupIngress:
       - IpProtocol: tcp                               
         FromPort: 6379
         ToPort: 6379
-        CidrIp: '0.0.0.0/0'
+        CidrIp: !Ref AuthorizedNetwork 
+
+  # Subnet group for Redis
   CacheSubnetGroup:                                   
     Type: 'AWS::ElastiCache::SubnetGroup'
     Properties:
-      Description: cache
+      Description: 'Subnet group for Redis cluster'
       SubnetIds:
       - Ref: SubnetA                                  
       - Ref: SubnetB
       - Ref: SubnetC
+
+  # Redis cluster
   Cache:
     Type: 'AWS::ElastiCache::ReplicationGroup'
     Properties:
@@ -45,3 +59,5 @@ Resources:
         - !Ref CacheSecurityGroup
       AtRestEncryptionEnabled: true
       TransitEncryptionEnabled: true
+      AuthToken: !Ref RedisAuthToken  # Use the password passed as a parameter
+      EngineVersion: 7.1  # Ensure you are using Redis version 6 or above for authentication and encryption support

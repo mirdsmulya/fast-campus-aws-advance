@@ -23,6 +23,8 @@
   - **SubnetA**: Choose a subnet ID.
   - **SubnetB**: Choose another subnet ID.
   - **SubnetC**: Choose a third subnet ID.
+  - **RedisAuthToken**: Add Redis Password
+  - **AuthorizedNetwork1**: Add Authorized Network that can access Redis Cluster
 - **Proceed**: Click **Next**.
 
 ### Step 6: Configure Stack Options
@@ -32,14 +34,40 @@
 - **Review**: Ensure all details are correct.
 - **Deploy**: Click **Create stack**.
 
-### Step 8: Monitor Deployment
+### Step 8: Upload the JumpHost Template
+- **Choose Template**: Under **Specify template**, select **Upload a template file**.
+- **Upload File**: Upload the `jumphost.yaml` file.
+- **Proceed**: Click **Next**.
+
+### Step 9: Configure JumpHost Stack Details
+- **Specify Parameters**:
+  - **VPC**: Select your VPC ID.
+  - **SubnetPublic**: Choose a subnet ID.
+  - **KeyPairName**: Choose a KeyPairName.
+- **Proceed**: Click **Next**.
+
+### Step 10: Configure Stack Options
+- **Proceed**: Click **Next**.
+
+### Step 11: Review and Deploy
+- **Review**: Ensure all details are correct.
+- **Deploy**: Click **Create stack**.
+
+### Step 12: Monitor Deployment
 - **Check Status**: Watch the stack status in CloudFormation until it shows **CREATE_COMPLETE**.
 
-### Step 9: Verify Deployment
+### Step 13: Verify Deployment
 - **ElastiCache Dashboard**: Go to the ElastiCache service, select Redis, and ensure the replication group spans multiple availability zones.
 - **Test Connectivity**: Use the primary endpoint from CloudFormation outputs to connect to your Redis cluster.
 
-### Step 10: Clean Up (Optional)
+### Step 14: Connect to JumpHost
+- **SSH into JumpHost**: Use the public IP of the JumpHost and your KeyPair to SSH into the JumpHost VM.
+
+### Step 15: Test Redis Connection via JumpHost
+- **Install Redis CLI**: Install the Redis CLI on the JumpHost VM using the command `sudo apt-get install redis-tools`.
+- **Connect to Redis**: Use the Redis CLI to connect to your Redis cluster using the command `redis-cli -h <RedisPrimaryEndpoint> -p 6379`.
+
+### Step 16: Clean Up (Optional)
 - **Delete the Stack**: To remove all resources, delete the stack from the CloudFormation dashboard.
 
-By following these steps, you'll deploy a highly available ElastiCache cluster using AWS CloudFormation.
+By following these steps, you'll deploy a highly available ElastiCache cluster using AWS CloudFormation and test the connection via a JumpHost VM.
